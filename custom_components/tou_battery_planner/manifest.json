@@ -1,0 +1,13 @@
+{
+  "domain": "tou_battery_planner",
+  "name": "TOU Battery Planner",
+  "codeowners": ["@avantil"],
+  "config_flow": true,
+  "dependencies": ["recorder"],
+  "documentation": "https://github.com/avantil/ha-tou-battery-planner",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/avantil/ha-tou-battery-planner/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

@@ -1,0 +1,143 @@
+{
+  "config": {
+    "step": {
+      "inverter": {
+        "title": "Inverter",
+        "description": "Pick the first TOU slot SOC entity (for example number.<prefix>_tou_1_battery_soc) to prefill the other slots by pattern.",
+        "data": {
+          "slot_count": "Number of TOU slots",
+          "capacity_kwh": "Usable battery capacity (kWh) - please confirm",
+          "floor_soc": "Floor SOC (%)",
+          "first_soc_entity": "Slot 1 SOC entity (prefills the rest)",
+          "tou_switch": "TOU enable switch (optional)"
+        }
+      },
+      "slots": {
+        "title": "TOU slots",
+        "description": "For each slot choose the SOC cap number, the optional start time entity, and whether Charge (grid charge) is enabled on the inverter for that slot.",
+        "data": {
+          "soc_1": "Slot 1 SOC cap",
+          "time_1": "Slot 1 start time",
+          "charge_1": "Slot 1 grid Charge enabled",
+          "soc_2": "Slot 2 SOC cap",
+          "time_2": "Slot 2 start time",
+          "charge_2": "Slot 2 grid Charge enabled",
+          "soc_3": "Slot 3 SOC cap",
+          "time_3": "Slot 3 start time",
+          "charge_3": "Slot 3 grid Charge enabled",
+          "soc_4": "Slot 4 SOC cap",
+          "time_4": "Slot 4 start time",
+          "charge_4": "Slot 4 grid Charge enabled",
+          "soc_5": "Slot 5 SOC cap",
+          "time_5": "Slot 5 start time",
+          "charge_5": "Slot 5 grid Charge enabled",
+          "soc_6": "Slot 6 SOC cap",
+          "time_6": "Slot 6 start time",
+          "charge_6": "Slot 6 grid Charge enabled"
+        }
+      },
+      "sensors": {
+        "title": "Sensors",
+        "data": {
+          "soc_sensor": "Battery SOC sensor (%)",
+          "pv_sensor": "PV power sensor (W or kW)",
+          "load_sensor": "House load power sensor (W or kW)",
+          "ev_sensors": "EV charger power sensors (W or kW)",
+          "price_sensor": "Real-time price sensor",
+          "price_unit": "Price unit"
+        }
+      },
+      "forecast": {
+        "title": "PV forecast",
+        "data": {
+          "forecast_source": "Forecast source",
+          "latitude": "Latitude (Open-Meteo)",
+          "longitude": "Longitude (Open-Meteo)",
+          "forecast_entity": "Tomorrow PV kWh entity (external source)",
+          "forecast_attribute": "Attribute holding the value (optional)",
+          "forecast_today_entity": "Today PV kWh entity (optional)",
+          "forecast_today_attribute": "Attribute holding today's value (optional)"
+        }
+      },
+      "roles": {
+        "title": "Slot roles",
+        "description": "Assign a role and start time to every slot. Defaults match a 6-slot layout.",
+        "data": {
+          "role_1": "Slot 1 role",
+          "start_1": "Slot 1 start",
+          "role_2": "Slot 2 role",
+          "start_2": "Slot 2 start",
+          "role_3": "Slot 3 role",
+          "start_3": "Slot 3 start",
+          "role_4": "Slot 4 role",
+          "start_4": "Slot 4 start",
+          "role_5": "Slot 5 role",
+          "start_5": "Slot 5 start",
+          "role_6": "Slot 6 role",
+          "start_6": "Slot 6 start"
+        }
+      }
+    },
+    "error": {
+      "duplicate_slot_entity": "Each slot needs its own SOC entity.",
+      "forecast_entity_required": "Choose the forecast entity when using an external source.",
+      "no_overnight_slot": "At least one slot must have the overnight role."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Planner tunables",
+        "data": {
+          "floor_soc": "Floor SOC (%)",
+          "reserve_buffer_kwh": "Reserve buffer (kWh)",
+          "cloudy_threshold_kwh": "Cloudy threshold (forecast PV kWh)",
+          "gate_price": "Overnight charge price gate (c/kWh)",
+          "spike_price": "Spike release price (c/kWh)",
+          "charge_deadline": "Charge deadline",
+          "plan_time_evening": "Evening planning time",
+          "plan_time_morning": "Morning planning time",
+          "afternoon_share": "Afternoon PV share used against the evening need",
+          "learning_days": "Learning window (days)",
+          "write_budget": "Write budget per hour",
+          "flat_daily_kwh": "Fallback daily load (kWh)",
+          "manual_pause_minutes": "Pause after manual change (minutes)"
+        }
+      }
+    }
+  },
+  "selector": {
+    "forecast_source": {
+      "options": {
+        "open_meteo": "Built-in Open-Meteo",
+        "sensor": "External sensor (Solcast, Forecast.Solar, ...)"
+      }
+    },
+    "slot_role": {
+      "options": {
+        "overnight": "Overnight (grid charge)",
+        "morning": "Morning (hold)",
+        "peak": "Peak (spend)",
+        "evening": "Evening (spend)"
+      }
+    }
+  },
+  "issues": {
+    "slot_unavailable": {
+      "title": "Inverter slot entities unavailable",
+      "description": "TOU slot entities {slots} have been unavailable for over 30 minutes. The planner writes nothing until all slot entities are available."
+    },
+    "write_reverted": {
+      "title": "Slot {slot} write keeps reverting",
+      "description": "The inverter did not keep the value written to slot {slot} after a retry. Writes to this slot are stopped until the next plan."
+    },
+    "write_budget_exceeded": {
+      "title": "Write budget exceeded",
+      "description": "The planner would have exceeded {budget} writes per hour and was turned off to guard against oscillation. Check the desired caps and re-enable it when ready."
+    },
+    "overnight_charge_disabled": {
+      "title": "Overnight slots have Charge disabled",
+      "description": "No overnight slot is marked as grid Charge. The cloudy profile cannot grid-charge the battery overnight."
+    }
+  }
+}

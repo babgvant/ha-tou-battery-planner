@@ -1,0 +1,21 @@
+plan_now:
+  fields:
+    entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: tou_battery_planner
+reconcile_now:
+  fields:
+    entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: tou_battery_planner
+write_slot_times:
+  fields:
+    entry_id:
+      required: false
+      selector:
+        config_entry:
+          integration: tou_battery_planner
