@@ -130,7 +130,8 @@ statistics-capable state class (`measurement`).
 ## Limitations
 
 - Does not control EV chargers, exporting, multi-day optimization or delivery-rate modeling.
-- Grid Charge flags are read (live switch or checkbox), never written.
+- Grid Charge flags are read (live switch or checkbox), never written. Future: manage the per-slot
+  grid charging switches based on price.
 - Slot start times are only written on request.
 - Behavior depends on the inverter TOU semantics above.
 - With an external forecast and no "today" entity, the 04:00 run keeps the evening plan.
