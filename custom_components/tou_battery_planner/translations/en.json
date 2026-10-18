@@ -67,7 +67,7 @@
       },
       "roles": {
         "title": "Slot roles",
-        "description": "Assign a role and start time to every slot. Defaults match a 6-slot layout.",
+        "description": "Assign a role and start time to every slot. Hold roles keep the battery at the target SOC on cloudy days (floor on sunny days); spend roles run it down to the floor. Whether a slot can grid-charge is decided by its Charge setting on the inverter, not by its role.",
         "data": {
           "role_1": "Slot 1 role",
           "start_1": "Slot 1 start",
@@ -87,7 +87,7 @@
     "error": {
       "duplicate_slot_entity": "Each slot needs its own SOC entity.",
       "forecast_entity_required": "Choose the forecast entity when using an external source.",
-      "no_charge_slot": "At least one slot must have the overnight or charge role.",
+      "no_charge_slot": "At least one slot must have the overnight or charge role (the slots that carry the cloudy-day target).",
       "energy_not_power": "PV, load and EV inputs must be power sensors (W or kW), not energy sensors (kWh)."
     }
   },
@@ -122,11 +122,11 @@
     },
     "slot_role": {
       "options": {
-        "overnight": "Overnight (grid charge)",
-        "morning": "Morning (hold)",
-        "peak": "Peak (spend)",
-        "evening": "Evening (spend)",
-        "charge": "Charge (daytime grid charge)"
+        "overnight": "Overnight - hold the target on cloudy days",
+        "morning": "Morning - hold the target on cloudy days",
+        "charge": "Charge slot - hold the target on cloudy days (grid charges here if Charge is on)",
+        "peak": "Peak - spend down to the floor",
+        "evening": "Evening - spend down to the floor"
       }
     }
   },

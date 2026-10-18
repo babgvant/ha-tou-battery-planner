@@ -38,11 +38,17 @@ caps accordingly.
 4. **Forecast**: built-in Open-Meteo (location from HA, overridable) or an external sensor
    that reports tomorrow's PV kWh (Solcast, Forecast.Solar, ...) with an optional attribute,
    and optionally a "today" entity used by the early-morning replan.
-5. **Slot roles**: `overnight` (should be a Charge slot), `morning` (hold), `peak` and
-   `evening` (spend), and `charge` (a daytime grid-charge slot: holds the target on a cloudy day,
-   floor on a sunny day, and is not touched by the overnight price gate). Use `charge` instead of
-   `overnight` if your only Charge-enabled slot is in the early afternoon. Default 6-slot layout: 00:00 overnight, 06:00 morning, 13:00 peak,
-   19:00 evening, 21:00 overnight, 23:00 overnight.
+5. **Slot roles**: a role says what the slot does to the battery, not whether it grid-charges
+   (that is the inverter's per-slot Charge setting).
+   - `overnight`, `morning`, `charge`: hold roles. On a cloudy day the cap is the target SOC,
+     on a sunny day the floor. If the slot has Charge on, the grid tops the battery up to the
+     target; otherwise the battery just holds (idle) until PV charges it.
+   - `peak`, `evening`: spend roles. The cap is the floor, so the battery serves the load; the
+     hours they cover set the evening-need window.
+   - `charge` is the same as a hold role, except the overnight price gate never applies to it.
+   Default 6-slot layout: 00:00 overnight, 06:00 morning, 13:00 peak, 19:00 evening, 21:00
+   overnight, 23:00 overnight. Start times and suggested roles are prefilled from your live
+   time entities and Charge switches.
 
 Use the "Write slot start times" button (or the `write_slot_times` service) once to push
 the role start times to your time entities and enable the TOU switch.
@@ -82,7 +88,7 @@ profile      = cloudy if forecast unavailable or forecast < threshold else sunny
 
 The 20:00 run plans tomorrow, the 04:00 run plans today.
 
-Caps: sunny sets every slot to the floor. Cloudy sets overnight and morning slots to the
+Caps: sunny sets every slot to the floor. Cloudy sets overnight, morning and charge slots to the
 target and peak/evening slots to the floor. Overrides apply to the current slot only:
 
 1. Price spike (>= spike price, on after 5 min, off after 15 min): floor.
