@@ -99,3 +99,25 @@ async def test_duplicate_slot_entities_rejected(recorder_mock, enable_custom_int
         },
     )
     assert result["errors"] == {"base": "duplicate_slot_entity"}
+
+
+async def test_energy_sensor_rejected_for_load(recorder_mock, enable_custom_integrations, hass):
+    result = await _start(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"slot_count": 1, "capacity_kwh": 50, "floor_soc": 20}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"soc_1": "number.sa_tou_1_battery_soc", "charge_1": False},
+    )
+    hass.states.async_set("sensor.load_energy", "1200", {"unit_of_measurement": "kWh"})
+    hass.states.async_set("sensor.load_w", "900", {"unit_of_measurement": "W"})
+    base = {"soc_sensor": "sensor.soc", "pv_sensor": "sensor.load_w", "price_sensor": "sensor.p"}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**base, "load_sensor": "sensor.load_energy", "price_unit": "auto"}
+    )
+    assert result["errors"] == {"base": "energy_not_power"}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {**base, "load_sensor": "sensor.load_w", "price_unit": "auto"}
+    )
+    assert result["step_id"] == "forecast"

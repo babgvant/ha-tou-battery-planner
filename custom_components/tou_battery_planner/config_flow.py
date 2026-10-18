@@ -92,6 +92,15 @@ def _prefill_charge_switch(hass, first_soc: str | None, n: int) -> str | None:
     return found[0] if len(found) == 1 else None
 
 
+def _is_energy_sensor(hass, entity_id: str) -> bool:
+    """True for energy (kWh) sensors, which must not be used as power inputs."""
+    st = hass.states.get(entity_id)
+    if st is None:
+        return False
+    unit = str(st.attributes.get("unit_of_measurement", "")).lower()
+    return st.attributes.get("device_class") == "energy" or unit in ("wh", "kwh", "mwh")
+
+
 def _tunable_schema(defaults: dict[str, Any]) -> dict:
     d = {**TUNABLE_DEFAULTS, **defaults}
     return {
@@ -193,10 +202,23 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_sensors(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
         if user_input is not None:
-            self._data.update(user_input)
-            self._data.setdefault(CONF_EV_SENSORS, [])
-            return await self.async_step_forecast()
+            bad = [
+                e
+                for e in (
+                    user_input[CONF_PV_SENSOR],
+                    user_input[CONF_LOAD_SENSOR],
+                    *user_input.get(CONF_EV_SENSORS, []),
+                )
+                if _is_energy_sensor(self.hass, e)
+            ]
+            if bad:
+                errors["base"] = "energy_not_power"
+            else:
+                self._data.update(user_input)
+                self._data.setdefault(CONF_EV_SENSORS, [])
+                return await self.async_step_forecast()
         schema = vol.Schema(
             {
                 vol.Required(CONF_SOC_SENSOR): _ent("sensor"),
@@ -209,7 +231,7 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
                 ),
             }
         )
-        return self.async_show_form(step_id="sensors", data_schema=schema)
+        return self.async_show_form(step_id="sensors", data_schema=schema, errors=errors)
 
     async def async_step_forecast(
         self, user_input: dict[str, Any] | None = None

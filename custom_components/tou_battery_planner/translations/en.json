@@ -87,7 +87,8 @@
     "error": {
       "duplicate_slot_entity": "Each slot needs its own SOC entity.",
       "forecast_entity_required": "Choose the forecast entity when using an external source.",
-      "no_charge_slot": "At least one slot must have the overnight or charge role."
+      "no_charge_slot": "At least one slot must have the overnight or charge role.",
+      "energy_not_power": "PV, load and EV inputs must be power sensors (W or kW), not energy sensors (kWh)."
     }
   },
   "options": {
