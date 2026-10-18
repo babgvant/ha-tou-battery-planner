@@ -121,3 +121,63 @@ async def test_energy_sensor_rejected_for_load(recorder_mock, enable_custom_inte
         result["flow_id"], {**base, "load_sensor": "sensor.load_w", "price_unit": "auto"}
     )
     assert result["step_id"] == "forecast"
+
+
+async def test_roles_prefilled_from_live_times_and_charge(
+    recorder_mock, enable_custom_integrations, hass
+):
+    result = await _start(hass)
+    starts = ["00:00", "08:00", "11:00", "13:00", "15:30", "21:00"]
+    for i, st in enumerate(starts, start=1):
+        hass.states.async_set(f"time.sa_tou_{i}_start_time", f"{st}:00")
+        hass.states.async_set(
+            f"switch.global_p_house_tou_{i}_grid_charging", "on" if i == 4 else "off"
+        )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "slot_count": 6,
+            "capacity_kwh": 96.5,
+            "floor_soc": 40,
+            "first_soc_entity": "number.sa_tou_1_battery_soc",
+        },
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            **{f"soc_{i}": f"number.sa_tou_{i}_battery_soc" for i in range(1, 7)},
+            **{f"time_{i}": f"time.sa_tou_{i}_start_time" for i in range(1, 7)},
+            **{
+                f"charge_switch_{i}": f"switch.global_p_house_tou_{i}_grid_charging"
+                for i in range(1, 7)
+            },
+        },
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            "soc_sensor": "sensor.soc",
+            "pv_sensor": "sensor.pv",
+            "load_sensor": "sensor.load",
+            "price_sensor": "sensor.price",
+            "price_unit": "auto",
+        },
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"forecast_source": "open_meteo"}
+    )
+    assert result["step_id"] == "roles"
+    defaults = {
+        str(k): k.default()
+        for k in result["data_schema"].schema
+        if callable(getattr(k, "default", None)) and k.default is not vol.UNDEFINED
+    }
+    assert [defaults[f"start_{i}"] for i in range(1, 7)] == [f"{s}:00" for s in starts]
+    assert [defaults[f"role_{i}"] for i in range(1, 7)] == [
+        "overnight",
+        "morning",
+        "morning",
+        "charge",
+        "evening",
+        "overnight",
+    ]

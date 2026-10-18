@@ -101,6 +101,39 @@ def _is_energy_sensor(hass, entity_id: str) -> bool:
     return st.attributes.get("device_class") == "energy" or unit in ("wh", "kwh", "mwh")
 
 
+def _live_start(hass, entity_id: str) -> str | None:
+    """Current "HH:MM" of a slot start time entity, if readable."""
+    st = hass.states.get(entity_id) if entity_id else None
+    if st is None or st.state in ("unknown", "unavailable", ""):
+        return None
+    try:
+        return _hhmm(st.state) if len(st.state.split(":")) >= 2 else None
+    except ValueError:
+        return None
+
+
+def _live_charge(hass, switches: list[str], flags: list[bool], slot: int) -> bool:
+    if slot <= len(switches) and switches[slot - 1]:
+        st = hass.states.get(switches[slot - 1])
+        if st is not None and st.state in ("on", "off"):
+            return st.state == "on"
+    return slot <= len(flags) and bool(flags[slot - 1])
+
+
+def _suggest_role(start: str, charge_on: bool) -> str:
+    """Suggest a slot role from its start time and whether grid Charge is on."""
+    minutes = int(start[:2]) * 60 + int(start[3:5])
+    if charge_on and 6 * 60 <= minutes < 18 * 60:
+        return Role.CHARGE.value
+    if minutes < 6 * 60 or minutes >= 21 * 60:
+        return Role.OVERNIGHT.value
+    if minutes < 13 * 60:
+        return Role.MORNING.value
+    if minutes < 15 * 60:
+        return Role.PEAK.value
+    return Role.EVENING.value
+
+
 def _tunable_schema(defaults: dict[str, Any]) -> dict:
     d = {**TUNABLE_DEFAULTS, **defaults}
     return {
@@ -279,9 +312,16 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
                     self._data.setdefault(key, val)
                 return self.async_create_entry(title="TOU Battery Planner", data=self._data)
         fields: dict[Any, Any] = {}
+        times = self._data.get(CONF_TIME_ENTITIES, [])
+        switches = self._data.get(CONF_CHARGE_SWITCHES, [])
+        flags = self._data.get(CONF_CHARGE_FLAGS, [])
         for i in range(1, n + 1):
-            start, role = DEFAULT_LAYOUT[i - 1]
-            fields[vol.Required(f"role_{i}", default=role.value)] = sel.SelectSelector(
+            default_start, default_role = DEFAULT_LAYOUT[i - 1]
+            live = _live_start(self.hass, times[i - 1] if i <= len(times) else "")
+            charge_on = _live_charge(self.hass, switches, flags, i)
+            start = live or default_start
+            role = _suggest_role(start, charge_on) if live else default_role.value
+            fields[vol.Required(f"role_{i}", default=role)] = sel.SelectSelector(
                 sel.SelectSelectorConfig(
                     options=[r.value for r in Role], translation_key="slot_role"
                 )
