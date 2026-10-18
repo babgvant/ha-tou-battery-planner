@@ -64,17 +64,17 @@ async def test_full_flow_with_prefill(recorder_mock, enable_custom_integrations,
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {
-            "role_1": "overnight",
+            "role_1": "charge",
             "start_1": "00:00:00",
-            "role_2": "morning",
+            "role_2": "hold",
             "start_2": "06:00:00",
-            "role_3": "peak",
+            "role_3": "spend",
             "start_3": "13:00:00",
-            "role_4": "evening",
+            "role_4": "spend",
             "start_4": "19:00:00",
-            "role_5": "overnight",
+            "role_5": "charge",
             "start_5": "21:00:00",
-            "role_6": "overnight",
+            "role_6": "charge",
             "start_6": "23:00:00",
         },
     )
@@ -174,10 +174,10 @@ async def test_roles_prefilled_from_live_times_and_charge(
     }
     assert [defaults[f"start_{i}"] for i in range(1, 7)] == [f"{s}:00" for s in starts]
     assert [defaults[f"role_{i}"] for i in range(1, 7)] == [
-        "overnight",
-        "morning",
-        "morning",
+        "hold",
+        "hold",
+        "hold",
         "charge",
-        "evening",
-        "overnight",
+        "hold",
+        "hold",
     ]

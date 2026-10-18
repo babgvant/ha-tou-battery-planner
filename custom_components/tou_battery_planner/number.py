@@ -6,7 +6,6 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.const import EntityCategory
 
 from .const import (
-    CONF_AFTERNOON_SHARE,
     CONF_BUFFER_KWH,
     CONF_CLOUDY_THRESHOLD,
     CONF_FLAT_DAILY_KWH,
@@ -14,6 +13,7 @@ from .const import (
     CONF_GATE_PRICE,
     CONF_LEARNING_DAYS,
     CONF_PAUSE_MINUTES,
+    CONF_SPEND_PV_SHARE,
     CONF_SPIKE_PRICE,
     CONF_WRITE_BUDGET,
 )
@@ -24,9 +24,9 @@ NUMBERS = (
     (CONF_FLOOR_SOC, "Floor SOC", 0, 100, 1, "%", True),
     (CONF_BUFFER_KWH, "Reserve buffer", 0, 50, 0.5, "kWh", False),
     (CONF_CLOUDY_THRESHOLD, "Cloudy threshold", 0, 200, 1, "kWh", False),
-    (CONF_GATE_PRICE, "Overnight charge price gate", 0, 100, 0.1, "c/kWh", False),
+    (CONF_GATE_PRICE, "Charge price gate", 0, 100, 0.1, "c/kWh", False),
     (CONF_SPIKE_PRICE, "Spike release price", 0, 500, 0.5, "c/kWh", False),
-    (CONF_AFTERNOON_SHARE, "Afternoon PV share", 0, 1, 0.05, None, False),
+    (CONF_SPEND_PV_SHARE, "PV share during spend slots", 0, 1, 0.05, None, False),
     (CONF_LEARNING_DAYS, "Learning window", 7, 90, 1, "d", True),
     (CONF_WRITE_BUDGET, "Write budget per hour", 1, 60, 1, None, True),
     (CONF_FLAT_DAILY_KWH, "Fallback daily load", 5, 300, 1, "kWh", False),

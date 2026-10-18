@@ -27,7 +27,6 @@ from homeassistant.util import dt as dt_util
 from . import forecast as fc
 from . import learning
 from .const import (
-    CONF_AFTERNOON_SHARE,
     CONF_BUFFER_KWH,
     CONF_CAPACITY,
     CONF_CHARGE_FLAGS,
@@ -48,8 +47,8 @@ from .const import (
     CONF_LOAD_SENSOR,
     CONF_LON,
     CONF_PAUSE_MINUTES,
-    CONF_PLAN_EVENING,
-    CONF_PLAN_MORNING,
+    CONF_PLAN_NEXT_DAY,
+    CONF_PLAN_SAME_DAY,
     CONF_PRICE_SENSOR,
     CONF_PRICE_UNIT,
     CONF_PV_SENSOR,
@@ -58,6 +57,7 @@ from .const import (
     CONF_SLOT_STARTS,
     CONF_SOC_ENTITIES,
     CONF_SOC_SENSOR,
+    CONF_SPEND_PV_SHARE,
     CONF_SPIKE_PRICE,
     CONF_TIME_ENTITIES,
     CONF_TOU_SWITCH,
@@ -410,7 +410,7 @@ class TouController:
         for unsub in self._plan_unsubs:
             unsub()
         self._plan_unsubs.clear()
-        for key, evening in ((CONF_PLAN_EVENING, True), (CONF_PLAN_MORNING, False)):
+        for key, evening in ((CONF_PLAN_NEXT_DAY, True), (CONF_PLAN_SAME_DAY, False)):
             t = parse_hhmm(str(self._opt(key)))
 
             async def _run(_now: datetime, evening: bool = evening) -> None:
@@ -440,7 +440,7 @@ class TouController:
         self.hass.config_entries.async_update_entry(
             self.entry, options={**self.entry.options, key: value}
         )
-        if key in (CONF_PLAN_EVENING, CONF_PLAN_MORNING):
+        if key in (CONF_PLAN_NEXT_DAY, CONF_PLAN_SAME_DAY):
             self._schedule_plans()
         self._notify()
         self.hass.async_create_task(self.async_reconcile("option"))
@@ -481,9 +481,9 @@ class TouController:
 
     def _check_charge_flags(self) -> None:
         roles = self.configured_slots()
-        overnight = [s.index for s in roles if s.role in GRID_CHARGE_ROLES]
-        has_charge = any(self.charge_flag(i) for i in overnight)
-        if overnight and not has_charge:
+        charge_slots = [s.index for s in roles if s.role in GRID_CHARGE_ROLES]
+        has_charge = any(self.charge_flag(i) for i in charge_slots)
+        if charge_slots and not has_charge:
             ir.async_create_issue(
                 self.hass,
                 DOMAIN,
@@ -672,7 +672,7 @@ class TouController:
         """Compute profile and target SOC for the day being planned."""
         now = dt_util.now()
         if for_tomorrow is None:
-            evening = parse_hhmm(str(self._opt(CONF_PLAN_EVENING)))
+            evening = parse_hhmm(str(self._opt(CONF_PLAN_NEXT_DAY)))
             for_tomorrow = now.time() >= evening
         await self._async_refresh_forecast()
         day = now.date() + timedelta(days=1 if for_tomorrow else 0)
@@ -684,7 +684,7 @@ class TouController:
             and not self.cfg.get(CONF_FORECAST_TODAY_ENTITY)
             and self.plan_result is not None
         ):
-            self.plan_note = "no 'today' forecast configured, kept the evening plan"
+            self.plan_note = "no 'today' forecast configured, kept the previous plan"
             self._notify()
             return
         slots = self.slots()
@@ -696,7 +696,7 @@ class TouController:
             self.floor,
             float(self._opt(CONF_BUFFER_KWH)),
             float(self._opt(CONF_CLOUDY_THRESHOLD)),
-            float(self._opt(CONF_AFTERNOON_SHARE)),
+            float(self._opt(CONF_SPEND_PV_SHARE)),
         )
         self.plan_for = day
         self.plan_note = f"{reason}: planned for {day.isoformat()}"

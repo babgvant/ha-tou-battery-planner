@@ -9,8 +9,8 @@ from .entity import TouEntity
 DESCRIPTIONS = (
     ("price_spike", "Price spike active", lambda c: c.spike_active, "mdi:flash-alert"),
     (
-        "overnight_charge_allowed",
-        "Overnight charge allowed",
+        "charge_allowed",
+        "Charge price gate open",
         lambda c: not c.gate_closed,
         "mdi:battery-charging",
     ),

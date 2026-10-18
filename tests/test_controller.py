@@ -197,11 +197,11 @@ async def test_charge_switch_read_live_and_issue(planner, hass):
     assert [c.charge_flag(i) for i in range(1, 7)] == [False] * 6
     await c.async_reconcile()
     reg = ir.async_get(hass)
-    assert reg.async_get_issue(DOMAIN, f"overnight_charge_disabled_{entry.entry_id}")
+    assert reg.async_get_issue(DOMAIN, f"no_charge_enabled_{entry.entry_id}")
     hass.states.async_set(switches[0], "on")
     assert c.charge_flag(1) is True
     await c.async_reconcile()
-    assert reg.async_get_issue(DOMAIN, f"overnight_charge_disabled_{entry.entry_id}") is None
+    assert reg.async_get_issue(DOMAIN, f"no_charge_enabled_{entry.entry_id}") is None
     # unavailable switch falls back to the static flag
     hass.states.async_set(switches[1], "unavailable")
     assert c.charge_flag(2) is True

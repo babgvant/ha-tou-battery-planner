@@ -41,7 +41,7 @@ ENTRY_DATA: dict[str, Any] = {
     CONF_CHARGE_FLAGS: [True, False, False, False, True, True],
     CONF_CAPACITY: 96.5,
     CONF_FLOOR_SOC: 20,
-    CONF_SLOT_ROLES: ["overnight", "morning", "peak", "evening", "overnight", "overnight"],
+    CONF_SLOT_ROLES: ["charge", "hold", "spend", "spend", "charge", "charge"],
     CONF_SLOT_STARTS: ["00:00", "06:00", "13:00", "19:00", "21:00", "23:00"],
     CONF_SOC_SENSOR: "sensor.battery_soc",
     CONF_PV_SENSOR: "sensor.pv_power",

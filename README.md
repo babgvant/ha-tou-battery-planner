@@ -37,24 +37,24 @@ caps accordingly.
    real-time price (cents/kWh or $/kWh, auto-detected from the unit).
 4. **Forecast**: built-in Open-Meteo (location from HA, overridable) or an external sensor
    that reports tomorrow's PV kWh (Solcast, Forecast.Solar, ...) with an optional attribute,
-   and optionally a "today" entity used by the early-morning replan.
-5. **Slot roles**: a role says what the slot does to the battery, not whether it grid-charges
-   (that is the inverter's per-slot Charge setting).
-   - `overnight`, `morning`, `charge`: hold roles. On a cloudy day the cap is the target SOC,
-     on a sunny day the floor. If the slot has Charge on, the grid tops the battery up to the
-     target; otherwise the battery just holds (idle) until PV charges it.
-   - `peak`, `evening`: spend roles. The cap is the floor, so the battery serves the load; the
-     hours they cover set the evening-need window.
-   - `charge` is the same as a hold role, except the overnight price gate never applies to it.
-   Default 6-slot layout: 00:00 overnight, 06:00 morning, 13:00 peak, 19:00 evening, 21:00
-   overnight, 23:00 overnight. Start times and suggested roles are prefilled from your live
-   time entities and Charge switches.
+   and optionally a "today" entity used by the same-day replan.
+5. **Slot roles**: a role says what the slot does to the battery, not when it runs and not
+   whether it can grid-charge (that is the inverter's per-slot Charge setting).
+   - `charge`: raise to the target SOC. If the slot has Charge on, the grid tops the battery up;
+     otherwise the battery holds until PV charges it. The charge price gate and deadline apply.
+   - `hold`: keep the battery at the target SOC (idle) on a cloudy day.
+   - `spend`: let the battery serve the house down to the floor. The hours these slots cover
+     set the "spend need" the plan must reserve energy for.
+   On a sunny day every slot uses the floor. Default 6-slot layout: 00:00 charge, 06:00 hold,
+   13:00 spend, 19:00 spend, 21:00 charge, 23:00 charge. Start times and suggested roles
+   (charge where the slot has Charge on, hold otherwise) are prefilled from your live time
+   entities and Charge switches; set your spend slots yourself.
 
 Use the "Write slot start times" button (or the `write_slot_times` service) once to push
 the role start times to your time entities and enable the TOU switch.
 
 Tunables (floor, buffer, cloudy threshold, price gate, spike price, deadline, plan times,
-afternoon share, learning days, write budget) are in the options flow and also exposed as
+PV share during spend slots, learning days, write budget) are in the options flow and also exposed as
 number / time entities in the CONFIG category.
 
 ## Inverter TOU semantics (assumption)
@@ -79,21 +79,21 @@ that it never grid-charges.
 Planning (pure logic in `planner.py`):
 
 ```
-evening_need = sum(load_profile[h]) over hours covered by peak + evening slots
-pv_after     = afternoon_share * forecast_pv_kwh
-reserve_kwh  = max(0, evening_need - pv_after) + buffer
+spend_need   = sum(load_profile[h]) over hours covered by spend slots
+pv_after     = spend_pv_share * forecast_pv_kwh
+reserve_kwh  = max(0, spend_need - pv_after) + buffer
 target_soc   = min(100, floor + ceil(reserve_kwh / capacity * 100))
 profile      = cloudy if forecast unavailable or forecast < threshold else sunny
 ```
 
-The 20:00 run plans tomorrow, the 04:00 run plans today.
+The next-day plan (default 20:00) plans tomorrow; the same-day plan (default 04:00) plans today.
 
-Caps: sunny sets every slot to the floor. Cloudy sets overnight, morning and charge slots to the
-target and peak/evening slots to the floor. Overrides apply to the current slot only:
+Caps: sunny sets every slot to the floor. Cloudy sets charge and hold slots to the
+target and spend slots to the floor. Overrides apply to the current slot only:
 
 1. Price spike (>= spike price, on after 5 min, off after 15 min): floor.
-2. Overnight price gate (cloudy, overnight role, cap above SOC, from the first evening
-   overnight slot until the deadline, price above gate, 10 min debounce both ways):
+2. Charge price gate (cloudy, charge slot, cap above SOC, from the start of the run of charge
+   slots until the charge deadline, price above gate, 10 min debounce both ways):
    hold at the current SOC instead of charging. After the deadline it charges at any
    price below the spike price.
 3. EV charging (> 1000 W, on after 2 min, off after 5 min): never go below the held SOC.
@@ -116,7 +116,7 @@ An unknown price counts as "above gate" and "not spike".
 
 ## Reading the reasoning
 
-- `sensor.*_target_soc` attributes: forecast, evening need, PV after, reserve, target, profile.
+- `sensor.*_target_soc` attributes: forecast, spend need, PV after, reserve, target, profile.
 - `sensor.*_desired_caps`: state is the comma list; attributes give each slot's cap and a
   reason such as `cloudy: hold 45% until 13:00`, `spike release`, `EV hold at 41%`,
   `price gate: defer charge, hold 30% until 04:30`.
@@ -140,7 +140,7 @@ statistics-capable state class (`measurement`).
   grid charging switches based on price.
 - Slot start times are only written on request.
 - Behavior depends on the inverter TOU semantics above.
-- With an external forecast and no "today" entity, the 04:00 run keeps the evening plan.
+- With an external forecast and no "today" entity, the same-day run keeps the previous plan.
 
 ## Development
 

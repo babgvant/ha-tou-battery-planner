@@ -16,16 +16,25 @@ MINUTES_PER_DAY = 24 * 60
 class Role(StrEnum):
     """What a TOU slot is used for."""
 
-    OVERNIGHT = "overnight"
-    MORNING = "morning"
-    CHARGE = "charge"  # daytime grid-charge slot (no overnight price gate)
-    PEAK = "peak"
-    EVENING = "evening"
+    CHARGE = "charge"  # raise to the target; grid charges if the slot has Charge on
+    HOLD = "hold"  # keep the battery at the target (idle) on cloudy days
+    SPEND = "spend"  # let the battery serve the house down to the floor
+
+    @classmethod
+    def _missing_(cls, value: object) -> Role | None:
+        """Accept the pre-release time-of-day role names."""
+        legacy = {
+            "overnight": cls.CHARGE,
+            "morning": cls.HOLD,
+            "peak": cls.SPEND,
+            "evening": cls.SPEND,
+        }
+        return legacy.get(str(value))
 
 
-SPEND_ROLES = (Role.PEAK, Role.EVENING)
-CHARGE_ROLES = (Role.OVERNIGHT, Role.MORNING, Role.CHARGE)
-GRID_CHARGE_ROLES = (Role.OVERNIGHT, Role.CHARGE)
+SPEND_ROLES = (Role.SPEND,)
+TARGET_ROLES = (Role.CHARGE, Role.HOLD)
+GRID_CHARGE_ROLES = (Role.CHARGE,)
 
 
 @dataclass(frozen=True)
@@ -38,12 +47,12 @@ class Slot:
 
 
 DEFAULT_LAYOUT: tuple[tuple[str, Role], ...] = (
-    ("00:00", Role.OVERNIGHT),
-    ("06:00", Role.MORNING),
-    ("13:00", Role.PEAK),
-    ("19:00", Role.EVENING),
-    ("21:00", Role.OVERNIGHT),
-    ("23:00", Role.OVERNIGHT),
+    ("00:00", Role.CHARGE),
+    ("06:00", Role.HOLD),
+    ("13:00", Role.SPEND),
+    ("19:00", Role.SPEND),
+    ("21:00", Role.CHARGE),
+    ("23:00", Role.CHARGE),
 )
 
 
@@ -97,8 +106,8 @@ def next_boundary(slots: list[Slot], now: time) -> time:
     return cur.start
 
 
-def evening_need_kwh(slots: list[Slot], load_profile: list[float]) -> float:
-    """Sum the hourly load over the hours covered by peak + evening slots."""
+def spend_need_kwh(slots: list[Slot], load_profile: list[float]) -> float:
+    """Sum the hourly load over the hours covered by spend slots."""
     total = 0.0
     for slot, start, end in slot_intervals(slots):
         if slot.role not in SPEND_ROLES:
@@ -116,7 +125,7 @@ class PlanResult:
     """Outcome of the daily plan with every intermediate exposed."""
 
     pv_forecast_kwh: float | None
-    evening_need_kwh: float
+    spend_need_kwh: float
     pv_after_kwh: float
     reserve_kwh: float
     target_soc: int
@@ -125,7 +134,7 @@ class PlanResult:
     def as_dict(self) -> dict:
         return {
             "pv_forecast_kwh": self.pv_forecast_kwh,
-            "evening_need_kwh": round(self.evening_need_kwh, 2),
+            "spend_need_kwh": round(self.spend_need_kwh, 2),
             "pv_after_kwh": round(self.pv_after_kwh, 2),
             "reserve_kwh": round(self.reserve_kwh, 2),
             "target_soc": self.target_soc,
@@ -141,18 +150,18 @@ def plan(
     floor_soc: int,
     buffer_kwh: float,
     cloudy_threshold_kwh: float,
-    afternoon_share: float,
+    spend_pv_share: float,
 ) -> PlanResult:
     """Compute target SOC and profile for the day being planned."""
-    need = evening_need_kwh(slots, load_profile)
-    pv_after = afternoon_share * pv_forecast_kwh if pv_forecast_kwh is not None else 0.0
+    need = spend_need_kwh(slots, load_profile)
+    pv_after = spend_pv_share * pv_forecast_kwh if pv_forecast_kwh is not None else 0.0
     reserve = max(0.0, need - pv_after) + buffer_kwh
     pct = math.ceil(round(reserve / capacity_kwh * 100, 6))
     target = int(min(100, floor_soc + pct))
     cloudy = pv_forecast_kwh is None or pv_forecast_kwh < cloudy_threshold_kwh
     return PlanResult(
         pv_forecast_kwh=pv_forecast_kwh,
-        evening_need_kwh=need,
+        spend_need_kwh=need,
         pv_after_kwh=pv_after,
         reserve_kwh=reserve,
         target_soc=target,
@@ -167,19 +176,26 @@ def hold_value(soc: float | None, floor_soc: int) -> int | None:
     return max(floor_soc, int(math.floor(soc)))
 
 
-def in_overnight_window(slots: list[Slot], now: time, deadline: time) -> bool:
-    """True from the first evening overnight slot until the deadline (spans midnight)."""
-    overnight = [s for s in slots if s.role is Role.OVERNIGHT]
-    if not overnight:
+def in_charge_window(slots: list[Slot], current: Slot, now: time, deadline: time) -> bool:
+    """True while the price gate may defer charging in ``current`` (a charge slot).
+
+    The window opens at the start of the run of consecutive charge slots that
+    contains the current slot and closes at the deadline (cyclic, so it can span
+    midnight). A deadline at the window start means the gate never defers.
+    """
+    if current.role is not Role.CHARGE:
         return False
-    evening = [s for s in overnight if _minutes(s.start) >= 12 * 60]
-    pool = evening or overnight
-    start = min(_minutes(s.start) for s in pool)
-    end = _minutes(deadline)
-    m = _minutes(now)
-    if end <= start:
-        return m >= start or m < end
-    return start <= m < end
+    ordered = [s for s, _, _ in slot_intervals(slots)]
+    pos = next(i for i, s in enumerate(ordered) if s.index == current.index)
+    first = pos
+    for step in range(1, len(ordered)):
+        prev = (pos - step) % len(ordered)
+        if ordered[prev].role is not Role.CHARGE:
+            break
+        first = prev
+    start = _minutes(ordered[first].start)
+    window = (_minutes(deadline) - start) % MINUTES_PER_DAY
+    return (_minutes(now) - start) % MINUTES_PER_DAY < window
 
 
 @dataclass(frozen=True)
@@ -221,7 +237,7 @@ def desired_caps(
     for slot in slots:
         end = intervals[slot.index][1] % MINUTES_PER_DAY
         end_txt = f"{end // 60:02d}:{end % 60:02d}"
-        if profile == "cloudy" and slot.role in CHARGE_ROLES:
+        if profile == "cloudy" and slot.role in TARGET_ROLES:
             base_by_index[slot.index] = target
             reasons_by_index[slot.index] = f"cloudy: hold {target}% until {end_txt}"
         elif profile == "cloudy":
@@ -244,10 +260,10 @@ def desired_caps(
     else:
         if (
             profile == "cloudy"
-            and cur.role is Role.OVERNIGHT
+            and cur.role is Role.CHARGE
             and cap > soc
             and gate_closed
-            and in_overnight_window(slots, now, deadline)
+            and in_charge_window(slots, cur, now, deadline)
         ):
             cap = min(cap, hold)
             reason = f"price gate: defer charge, hold {cap}% until {_fmt(deadline)}"

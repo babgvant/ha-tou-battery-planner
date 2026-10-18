@@ -42,9 +42,9 @@ CONF_CLOUDY_THRESHOLD = "cloudy_threshold_kwh"
 CONF_GATE_PRICE = "gate_price"
 CONF_SPIKE_PRICE = "spike_price"
 CONF_DEADLINE = "charge_deadline"
-CONF_PLAN_EVENING = "plan_time_evening"
-CONF_PLAN_MORNING = "plan_time_morning"
-CONF_AFTERNOON_SHARE = "afternoon_share"
+CONF_PLAN_NEXT_DAY = "plan_time_next_day"
+CONF_PLAN_SAME_DAY = "plan_time_same_day"
+CONF_SPEND_PV_SHARE = "spend_pv_share"
 CONF_LEARNING_DAYS = "learning_days"
 CONF_WRITE_BUDGET = "write_budget"
 CONF_FLAT_DAILY_KWH = "flat_daily_kwh"
@@ -57,9 +57,9 @@ TUNABLE_DEFAULTS: dict[str, float | int | str] = {
     CONF_GATE_PRICE: 4.5,
     CONF_SPIKE_PRICE: 15.0,
     CONF_DEADLINE: "04:30",
-    CONF_PLAN_EVENING: "20:00",
-    CONF_PLAN_MORNING: "04:00",
-    CONF_AFTERNOON_SHARE: 0.5,
+    CONF_PLAN_NEXT_DAY: "20:00",
+    CONF_PLAN_SAME_DAY: "04:00",
+    CONF_SPEND_PV_SHARE: 0.5,
     CONF_LEARNING_DAYS: 28,
     CONF_WRITE_BUDGET: 12,
     CONF_FLAT_DAILY_KWH: 55.0,
@@ -90,4 +90,4 @@ SIGNAL_UPDATE = f"{DOMAIN}_update_{{}}"
 ISSUE_SLOT_UNAVAILABLE = "slot_unavailable"
 ISSUE_WRITE_REVERTED = "write_reverted"
 ISSUE_BUDGET = "write_budget_exceeded"
-ISSUE_NO_CHARGE = "overnight_charge_disabled"
+ISSUE_NO_CHARGE = "no_charge_enabled"

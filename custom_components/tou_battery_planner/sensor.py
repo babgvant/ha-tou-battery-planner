@@ -107,9 +107,9 @@ DESCRIPTIONS: tuple[_Desc, ...] = (
         device_class=SensorDeviceClass.ENERGY,
     ),
     _Desc(
-        "evening_need",
-        "Evening need",
-        lambda c: _round(_plan(c, "evening_need_kwh")),
+        "spend_need",
+        "Spend need",
+        lambda c: _round(_plan(c, "spend_need_kwh")),
         unit=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
     ),

@@ -67,7 +67,7 @@
       },
       "roles": {
         "title": "Slot roles",
-        "description": "Assign a role and start time to every slot. Hold roles keep the battery at the target SOC on cloudy days (floor on sunny days); spend roles run it down to the floor. Whether a slot can grid-charge is decided by its Charge setting on the inverter, not by its role.",
+        "description": "Assign a behavior and start time to every slot. On a cloudy day Charge and Hold slots use the target SOC and Spend slots the floor; on a sunny day every slot uses the floor. Whether a slot can actually grid-charge is the inverter's per-slot Charge setting, not its role.",
         "data": {
           "role_1": "Slot 1 role",
           "start_1": "Slot 1 start",
@@ -87,8 +87,9 @@
     "error": {
       "duplicate_slot_entity": "Each slot needs its own SOC entity.",
       "forecast_entity_required": "Choose the forecast entity when using an external source.",
-      "no_charge_slot": "At least one slot must have the overnight or charge role (the slots that carry the cloudy-day target).",
-      "energy_not_power": "PV, load and EV inputs must be power sensors (W or kW), not energy sensors (kWh)."
+      "energy_not_power": "PV, load and EV inputs must be power sensors (W or kW), not energy sensors (kWh).",
+      "no_charge_slot": "At least one slot must have the Charge role.",
+      "no_spend_slot": "At least one slot must have the Spend role (it defines the energy the battery must cover)."
     }
   },
   "options": {
@@ -99,12 +100,12 @@
           "floor_soc": "Floor SOC (%)",
           "reserve_buffer_kwh": "Reserve buffer (kWh)",
           "cloudy_threshold_kwh": "Cloudy threshold (forecast PV kWh)",
-          "gate_price": "Overnight charge price gate (c/kWh)",
+          "gate_price": "Charge price gate (c/kWh)",
           "spike_price": "Spike release price (c/kWh)",
           "charge_deadline": "Charge deadline",
-          "plan_time_evening": "Evening planning time",
-          "plan_time_morning": "Morning planning time",
-          "afternoon_share": "Afternoon PV share used against the evening need",
+          "plan_time_next_day": "Plan-for-tomorrow time",
+          "plan_time_same_day": "Plan-for-today time",
+          "spend_pv_share": "Share of forecast PV counted against the spend need",
           "learning_days": "Learning window (days)",
           "write_budget": "Write budget per hour",
           "flat_daily_kwh": "Fallback daily load (kWh)",
@@ -122,11 +123,9 @@
     },
     "slot_role": {
       "options": {
-        "overnight": "Overnight - hold the target on cloudy days",
-        "morning": "Morning - hold the target on cloudy days",
-        "charge": "Charge slot - hold the target on cloudy days (grid charges here if Charge is on)",
-        "peak": "Peak - spend down to the floor",
-        "evening": "Evening - spend down to the floor"
+        "charge": "Charge - raise to the target (grid charges here if Charge is on)",
+        "hold": "Hold - keep the battery at the target (idle)",
+        "spend": "Spend - let the battery serve the house down to the floor"
       }
     }
   },
@@ -143,9 +142,9 @@
       "title": "Write budget exceeded",
       "description": "The planner would have exceeded {budget} writes per hour and was turned off to guard against oscillation. Check the desired caps and re-enable it when ready."
     },
-    "overnight_charge_disabled": {
-      "title": "No grid-charge slot has Charge enabled",
-      "description": "No slot with the overnight or charge role has grid charging enabled on the inverter, so the cloudy profile cannot grid-charge the battery."
+    "no_charge_enabled": {
+      "title": "No Charge slot has grid charging enabled",
+      "description": "No slot with the Charge role has grid charging enabled on the inverter, so the cloudy profile cannot grid-charge the battery."
     }
   }
 }

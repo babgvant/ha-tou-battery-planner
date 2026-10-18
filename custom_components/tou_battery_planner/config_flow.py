@@ -11,7 +11,6 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector as sel
 
 from .const import (
-    CONF_AFTERNOON_SHARE,
     CONF_BUFFER_KWH,
     CONF_CAPACITY,
     CONF_CHARGE_FLAGS,
@@ -32,8 +31,8 @@ from .const import (
     CONF_LOAD_SENSOR,
     CONF_LON,
     CONF_PAUSE_MINUTES,
-    CONF_PLAN_EVENING,
-    CONF_PLAN_MORNING,
+    CONF_PLAN_NEXT_DAY,
+    CONF_PLAN_SAME_DAY,
     CONF_PRICE_SENSOR,
     CONF_PRICE_UNIT,
     CONF_PV_SENSOR,
@@ -42,6 +41,7 @@ from .const import (
     CONF_SLOT_STARTS,
     CONF_SOC_ENTITIES,
     CONF_SOC_SENSOR,
+    CONF_SPEND_PV_SHARE,
     CONF_SPIKE_PRICE,
     CONF_TIME_ENTITIES,
     CONF_TOU_SWITCH,
@@ -120,18 +120,9 @@ def _live_charge(hass, switches: list[str], flags: list[bool], slot: int) -> boo
     return slot <= len(flags) and bool(flags[slot - 1])
 
 
-def _suggest_role(start: str, charge_on: bool) -> str:
-    """Suggest a slot role from its start time and whether grid Charge is on."""
-    minutes = int(start[:2]) * 60 + int(start[3:5])
-    if charge_on and 6 * 60 <= minutes < 18 * 60:
-        return Role.CHARGE.value
-    if minutes < 6 * 60 or minutes >= 21 * 60:
-        return Role.OVERNIGHT.value
-    if minutes < 13 * 60:
-        return Role.MORNING.value
-    if minutes < 15 * 60:
-        return Role.PEAK.value
-    return Role.EVENING.value
+def _suggest_role(charge_on: bool) -> str:
+    """Suggest a role from the slot's Charge setting (hold otherwise)."""
+    return Role.CHARGE.value if charge_on else Role.HOLD.value
 
 
 def _tunable_schema(defaults: dict[str, Any]) -> dict:
@@ -145,9 +136,9 @@ def _tunable_schema(defaults: dict[str, Any]) -> dict:
         vol.Required(CONF_GATE_PRICE, default=d[CONF_GATE_PRICE]): _num(0, 100, 0.1, "c/kWh"),
         vol.Required(CONF_SPIKE_PRICE, default=d[CONF_SPIKE_PRICE]): _num(0, 500, 0.5, "c/kWh"),
         vol.Required(CONF_DEADLINE, default=d[CONF_DEADLINE]): sel.TimeSelector(),
-        vol.Required(CONF_PLAN_EVENING, default=d[CONF_PLAN_EVENING]): sel.TimeSelector(),
-        vol.Required(CONF_PLAN_MORNING, default=d[CONF_PLAN_MORNING]): sel.TimeSelector(),
-        vol.Required(CONF_AFTERNOON_SHARE, default=d[CONF_AFTERNOON_SHARE]): _num(0, 1, 0.05),
+        vol.Required(CONF_PLAN_NEXT_DAY, default=d[CONF_PLAN_NEXT_DAY]): sel.TimeSelector(),
+        vol.Required(CONF_PLAN_SAME_DAY, default=d[CONF_PLAN_SAME_DAY]): sel.TimeSelector(),
+        vol.Required(CONF_SPEND_PV_SHARE, default=d[CONF_SPEND_PV_SHARE]): _num(0, 1, 0.05),
         vol.Required(CONF_LEARNING_DAYS, default=d[CONF_LEARNING_DAYS]): _num(7, 90, 1, "d"),
         vol.Required(CONF_WRITE_BUDGET, default=d[CONF_WRITE_BUDGET]): _num(1, 60, 1),
         vol.Required(CONF_FLAT_DAILY_KWH, default=d[CONF_FLAT_DAILY_KWH]): _num(5, 300, 1, "kWh"),
@@ -301,8 +292,10 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             roles = [user_input[f"role_{i}"] for i in range(1, n + 1)]
-            if not {Role.OVERNIGHT.value, Role.CHARGE.value} & set(roles):
+            if Role.CHARGE.value not in roles:
                 errors["base"] = "no_charge_slot"
+            elif Role.SPEND.value not in roles:
+                errors["base"] = "no_spend_slot"
             else:
                 self._data[CONF_SLOT_ROLES] = roles
                 self._data[CONF_SLOT_STARTS] = [
@@ -320,7 +313,7 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
             live = _live_start(self.hass, times[i - 1] if i <= len(times) else "")
             charge_on = _live_charge(self.hass, switches, flags, i)
             start = live or default_start
-            role = _suggest_role(start, charge_on) if live else default_role.value
+            role = _suggest_role(charge_on) if live else default_role.value
             fields[vol.Required(f"role_{i}", default=role)] = sel.SelectSelector(
                 sel.SelectSelectorConfig(
                     options=[r.value for r in Role], translation_key="slot_role"
@@ -335,7 +328,7 @@ class TouOptionsFlow(OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            for key in (CONF_DEADLINE, CONF_PLAN_EVENING, CONF_PLAN_MORNING):
+            for key in (CONF_DEADLINE, CONF_PLAN_NEXT_DAY, CONF_PLAN_SAME_DAY):
                 user_input[key] = _hhmm(user_input[key])
             for key in (CONF_FLOOR_SOC, CONF_LEARNING_DAYS, CONF_WRITE_BUDGET, CONF_PAUSE_MINUTES):
                 user_input[key] = int(user_input[key])
@@ -345,7 +338,7 @@ class TouOptionsFlow(OptionsFlow):
             {
                 k: (
                     f"{v}:00"
-                    if k in (CONF_DEADLINE, CONF_PLAN_EVENING, CONF_PLAN_MORNING)
+                    if k in (CONF_DEADLINE, CONF_PLAN_NEXT_DAY, CONF_PLAN_SAME_DAY)
                     and len(str(v)) == 5
                     else v
                 )
