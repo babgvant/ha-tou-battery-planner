@@ -29,8 +29,10 @@ caps accordingly.
 1. **Inverter**: number of slots, usable capacity (confirm it, there is no real default),
    floor SOC, optional TOU enable switch. Pick the slot 1 SOC entity
    (`number.<prefix>_tou_1_battery_soc`) to prefill slots 2..6 by pattern.
-2. **Slots**: per slot the SOC cap `number`, the optional start `time` entity, and whether
-   grid Charge is enabled on the inverter (a fixed configuration; the planner cannot change it).
+2. **Slots**: per slot the SOC cap `number`, the optional start `time` entity, and the grid
+   Charge flag. Pick the inverter's per-slot grid charging `switch` (for example
+   `switch.<prefix>_tou_<n>_grid_charging`, prefilled by pattern) and the planner reads it live;
+   it never writes it. Without a switch, the fallback checkbox is used (default off).
 3. **Sensors**: battery SOC, PV power, house load power, optional EV power sensors,
    real-time price (cents/kWh or $/kWh, auto-detected from the unit).
 4. **Forecast**: built-in Open-Meteo (location from HA, overridable) or an external sensor
@@ -126,7 +128,7 @@ statistics-capable state class (`measurement`).
 ## Limitations
 
 - Does not control EV chargers, exporting, multi-day optimization or delivery-rate modeling.
-- Grid Charge flags are configuration, not written.
+- Grid Charge flags are read (live switch or checkbox), never written.
 - Slot start times are only written on request.
 - Behavior depends on the inverter TOU semantics above.
 - With an external forecast and no "today" entity, the 04:00 run keeps the evening plan.

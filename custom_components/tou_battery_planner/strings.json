@@ -14,14 +14,32 @@
       },
       "slots": {
         "title": "TOU slots",
-        "description": "For each slot choose the SOC cap number, the optional start time entity, and whether Charge (grid charge) is enabled on the inverter for that slot.",
+        "description": "For each slot choose the SOC cap number, the optional start time entity, and either the inverter's per-slot grid charging switch (read live, never written) or the fallback Charge checkbox.",
         "data": {
-          "soc_1": "Slot 1 SOC cap", "time_1": "Slot 1 start time", "charge_1": "Slot 1 grid Charge enabled",
-          "soc_2": "Slot 2 SOC cap", "time_2": "Slot 2 start time", "charge_2": "Slot 2 grid Charge enabled",
-          "soc_3": "Slot 3 SOC cap", "time_3": "Slot 3 start time", "charge_3": "Slot 3 grid Charge enabled",
-          "soc_4": "Slot 4 SOC cap", "time_4": "Slot 4 start time", "charge_4": "Slot 4 grid Charge enabled",
-          "soc_5": "Slot 5 SOC cap", "time_5": "Slot 5 start time", "charge_5": "Slot 5 grid Charge enabled",
-          "soc_6": "Slot 6 SOC cap", "time_6": "Slot 6 start time", "charge_6": "Slot 6 grid Charge enabled"
+          "soc_1": "Slot 1 SOC cap",
+          "time_1": "Slot 1 start time",
+          "charge_switch_1": "Slot 1 grid charging switch (read live)",
+          "charge_1": "Slot 1 grid Charge enabled (fallback)",
+          "soc_2": "Slot 2 SOC cap",
+          "time_2": "Slot 2 start time",
+          "charge_switch_2": "Slot 2 grid charging switch (read live)",
+          "charge_2": "Slot 2 grid Charge enabled (fallback)",
+          "soc_3": "Slot 3 SOC cap",
+          "time_3": "Slot 3 start time",
+          "charge_switch_3": "Slot 3 grid charging switch (read live)",
+          "charge_3": "Slot 3 grid Charge enabled (fallback)",
+          "soc_4": "Slot 4 SOC cap",
+          "time_4": "Slot 4 start time",
+          "charge_switch_4": "Slot 4 grid charging switch (read live)",
+          "charge_4": "Slot 4 grid Charge enabled (fallback)",
+          "soc_5": "Slot 5 SOC cap",
+          "time_5": "Slot 5 start time",
+          "charge_switch_5": "Slot 5 grid charging switch (read live)",
+          "charge_5": "Slot 5 grid Charge enabled (fallback)",
+          "soc_6": "Slot 6 SOC cap",
+          "time_6": "Slot 6 start time",
+          "charge_switch_6": "Slot 6 grid charging switch (read live)",
+          "charge_6": "Slot 6 grid Charge enabled (fallback)"
         }
       },
       "sensors": {
@@ -51,12 +69,18 @@
         "title": "Slot roles",
         "description": "Assign a role and start time to every slot. Defaults match a 6-slot layout.",
         "data": {
-          "role_1": "Slot 1 role", "start_1": "Slot 1 start",
-          "role_2": "Slot 2 role", "start_2": "Slot 2 start",
-          "role_3": "Slot 3 role", "start_3": "Slot 3 start",
-          "role_4": "Slot 4 role", "start_4": "Slot 4 start",
-          "role_5": "Slot 5 role", "start_5": "Slot 5 start",
-          "role_6": "Slot 6 role", "start_6": "Slot 6 start"
+          "role_1": "Slot 1 role",
+          "start_1": "Slot 1 start",
+          "role_2": "Slot 2 role",
+          "start_2": "Slot 2 start",
+          "role_3": "Slot 3 role",
+          "start_3": "Slot 3 start",
+          "role_4": "Slot 4 role",
+          "start_4": "Slot 4 start",
+          "role_5": "Slot 5 role",
+          "start_5": "Slot 5 start",
+          "role_6": "Slot 6 role",
+          "start_6": "Slot 6 start"
         }
       }
     },

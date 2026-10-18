@@ -15,6 +15,7 @@ from .const import (
     CONF_BUFFER_KWH,
     CONF_CAPACITY,
     CONF_CHARGE_FLAGS,
+    CONF_CHARGE_SWITCHES,
     CONF_CLOUDY_THRESHOLD,
     CONF_DEADLINE,
     CONF_EV_SENSORS,
@@ -80,6 +81,15 @@ def _prefill(hass, first_soc: str | None, n: int) -> tuple[str | None, str | Non
     if hass.states.get(cand):
         time_id = cand
     return (soc if hass.states.get(soc) else None), time_id
+
+
+def _prefill_charge_switch(hass, first_soc: str | None, n: int) -> str | None:
+    """Derive switch.<prefix>_tou_<n>_grid_charging from the slot 1 SOC entity."""
+    m = _SOC_PATTERN.match(first_soc or "")
+    if not m:
+        return None
+    cand = f"switch.{m.group(1)[len('number.') :]}{n}_grid_charging"
+    return cand if hass.states.get(cand) else None
 
 
 def _tunable_schema(defaults: dict[str, Any]) -> dict:
@@ -157,6 +167,9 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._data[CONF_TIME_ENTITIES] = [
                     user_input.get(f"time_{i}", "") for i in range(1, n + 1)
                 ]
+                self._data[CONF_CHARGE_SWITCHES] = [
+                    user_input.get(f"charge_switch_{i}", "") for i in range(1, n + 1)
+                ]
                 self._data[CONF_CHARGE_FLAGS] = [
                     bool(user_input.get(f"charge_{i}", False)) for i in range(1, n + 1)
                 ]
@@ -169,7 +182,11 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
                 _, tm = _prefill(self.hass, self._first_soc, 1)
             fields[vol.Required(f"soc_{i}", **({"default": soc} if soc else {}))] = _ent("number")
             fields[vol.Optional(f"time_{i}", **({"default": tm} if tm else {}))] = _ent("time")
-            # Not detectable from HA: default off so the user opts in per slot.
+            cs = _prefill_charge_switch(self.hass, self._first_soc, i)
+            fields[vol.Optional(f"charge_switch_{i}", **({"default": cs} if cs else {}))] = _ent(
+                "switch"
+            )
+            # Fallback when no switch is chosen; default off so the user opts in per slot.
             fields[vol.Required(f"charge_{i}", default=False)] = bool
         return self.async_show_form(step_id="slots", data_schema=vol.Schema(fields), errors=errors)
 

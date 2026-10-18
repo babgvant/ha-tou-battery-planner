@@ -182,3 +182,26 @@ async def test_services_registered(planner, hass):
     assert hass.services.has_service(DOMAIN, "reconcile_now")
     assert hass.services.has_service(DOMAIN, "write_slot_times")
     _ = async_fire_time_changed
+
+
+async def test_charge_switch_read_live_and_issue(planner, hass):
+    c, _, entry = planner
+    switches = [f"switch.sa_tou_{i}_grid_charging" for i in range(1, 7)]
+    hass.config_entries.async_update_entry(
+        entry, data={**entry.data, "charge_switches": switches, "charge_flags": [True] * 6}
+    )
+    c.skip_next_reload = True
+    await hass.async_block_till_done()
+    for s in switches:
+        hass.states.async_set(s, "off")
+    assert [c.charge_flag(i) for i in range(1, 7)] == [False] * 6
+    await c.async_reconcile()
+    reg = ir.async_get(hass)
+    assert reg.async_get_issue(DOMAIN, f"overnight_charge_disabled_{entry.entry_id}")
+    hass.states.async_set(switches[0], "on")
+    assert c.charge_flag(1) is True
+    await c.async_reconcile()
+    assert reg.async_get_issue(DOMAIN, f"overnight_charge_disabled_{entry.entry_id}") is None
+    # unavailable switch falls back to the static flag
+    hass.states.async_set(switches[1], "unavailable")
+    assert c.charge_flag(2) is True

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import voluptuous as vol
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.tou_battery_planner.const import DOMAIN
@@ -11,6 +12,7 @@ async def _start(hass):
     for i in range(1, 7):
         hass.states.async_set(f"number.sa_tou_{i}_battery_soc", "20")
         hass.states.async_set(f"time.sa_tou_{i}_start_time", "00:00:00")
+        hass.states.async_set(f"switch.sa_tou_{i}_grid_charging", "off")
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     assert result["step_id"] == "inverter"
     return result
@@ -29,8 +31,13 @@ async def test_full_flow_with_prefill(recorder_mock, enable_custom_integrations,
     )
     assert result["step_id"] == "slots"
     # prefilled defaults for slots 2..6
-    defaults = {str(k): k.default() for k in result["data_schema"].schema if hasattr(k, "default")}
+    defaults = {
+        str(k): k.default()
+        for k in result["data_schema"].schema
+        if hasattr(k, "default") and callable(k.default) and k.default is not vol.UNDEFINED
+    }
     assert defaults["soc_3"] == "number.sa_tou_3_battery_soc"
+    assert defaults["charge_switch_3"] == "switch.sa_tou_3_grid_charging"
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {

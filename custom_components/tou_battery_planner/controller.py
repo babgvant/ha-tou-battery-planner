@@ -31,6 +31,7 @@ from .const import (
     CONF_BUFFER_KWH,
     CONF_CAPACITY,
     CONF_CHARGE_FLAGS,
+    CONF_CHARGE_SWITCHES,
     CONF_CLOUDY_THRESHOLD,
     CONF_DEADLINE,
     CONF_EV_SENSORS,
@@ -362,6 +363,7 @@ class TouController:
             cfg.get(CONF_PRICE_SENSOR),
             *(cfg.get(CONF_EV_SENSORS) or []),
             *self.soc_entities,
+            *self.charge_switches,
         ]
         watch = [w for w in watch if w]
         self._unsubs.append(
@@ -462,11 +464,24 @@ class TouController:
         self._notify()
         self.hass.async_create_task(self.async_reconcile("profile_mode"))
 
+    @property
+    def charge_switches(self) -> list[str]:
+        return [s for s in (self.cfg.get(CONF_CHARGE_SWITCHES) or []) if s]
+
+    def charge_flag(self, slot: int) -> bool:
+        """Grid Charge enabled for a slot: live switch state, else the static flag."""
+        switches = list(self.cfg.get(CONF_CHARGE_SWITCHES) or [])
+        if slot <= len(switches) and switches[slot - 1]:
+            st = self._state(switches[slot - 1])
+            if st is not None and st.state in ("on", "off"):
+                return st.state == "on"
+        flags = list(self.cfg.get(CONF_CHARGE_FLAGS) or [])
+        return slot <= len(flags) and bool(flags[slot - 1])
+
     def _check_charge_flags(self) -> None:
         roles = self.configured_slots()
-        flags = list(self.cfg.get(CONF_CHARGE_FLAGS) or [])
         overnight = [s.index for s in roles if s.role is Role.OVERNIGHT]
-        has_charge = any(i <= len(flags) and flags[i - 1] for i in overnight)
+        has_charge = any(self.charge_flag(i) for i in overnight)
         if overnight and not has_charge:
             ir.async_create_issue(
                 self.hass,
@@ -755,6 +770,7 @@ class TouController:
 
     async def _reconcile(self, reason: str) -> None:
         now = dt_util.utcnow()
+        self._check_charge_flags()
         self._update_debouncers(now)
         self.desired = self.compute_desired(now)
 
@@ -1001,6 +1017,7 @@ class TouController:
                 "provisional": self.load_profile.provisional,
                 "days": self.load_profile.days_of_data,
             },
+            "charge_flags": [self.charge_flag(i) for i in range(1, self.slot_count + 1)],
             "k": self.st.k,
             "k_history": self.st.k_history,
             "forecast_pairs": self.st.pairs[-14:],
