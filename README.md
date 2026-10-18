@@ -39,7 +39,9 @@ caps accordingly.
    that reports tomorrow's PV kWh (Solcast, Forecast.Solar, ...) with an optional attribute,
    and optionally a "today" entity used by the early-morning replan.
 5. **Slot roles**: `overnight` (should be a Charge slot), `morning` (hold), `peak` and
-   `evening` (spend). Default 6-slot layout: 00:00 overnight, 06:00 morning, 13:00 peak,
+   `evening` (spend), and `charge` (a daytime grid-charge slot: holds the target on a cloudy day,
+   floor on a sunny day, and is not touched by the overnight price gate). Use `charge` instead of
+   `overnight` if your only Charge-enabled slot is in the early afternoon. Default 6-slot layout: 00:00 overnight, 06:00 morning, 13:00 peak,
    19:00 evening, 21:00 overnight, 23:00 overnight.
 
 Use the "Write slot start times" button (or the `write_slot_times` service) once to push

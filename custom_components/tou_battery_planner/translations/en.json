@@ -87,7 +87,7 @@
     "error": {
       "duplicate_slot_entity": "Each slot needs its own SOC entity.",
       "forecast_entity_required": "Choose the forecast entity when using an external source.",
-      "no_overnight_slot": "At least one slot must have the overnight role."
+      "no_charge_slot": "At least one slot must have the overnight or charge role."
     }
   },
   "options": {
@@ -124,7 +124,8 @@
         "overnight": "Overnight (grid charge)",
         "morning": "Morning (hold)",
         "peak": "Peak (spend)",
-        "evening": "Evening (spend)"
+        "evening": "Evening (spend)",
+        "charge": "Charge (daytime grid charge)"
       }
     }
   },
@@ -142,8 +143,8 @@
       "description": "The planner would have exceeded {budget} writes per hour and was turned off to guard against oscillation. Check the desired caps and re-enable it when ready."
     },
     "overnight_charge_disabled": {
-      "title": "Overnight slots have Charge disabled",
-      "description": "No overnight slot is marked as grid Charge. The cloudy profile cannot grid-charge the battery overnight."
+      "title": "No grid-charge slot has Charge enabled",
+      "description": "No slot with the overnight or charge role has grid charging enabled on the inverter, so the cloudy profile cannot grid-charge the battery."
     }
   }
 }

@@ -83,6 +83,7 @@ from .const import (
     WRITE_SPACING_SECONDS,
 )
 from .planner import (
+    GRID_CHARGE_ROLES,
     DesiredCaps,
     PlanResult,
     Role,
@@ -480,7 +481,7 @@ class TouController:
 
     def _check_charge_flags(self) -> None:
         roles = self.configured_slots()
-        overnight = [s.index for s in roles if s.role is Role.OVERNIGHT]
+        overnight = [s.index for s in roles if s.role in GRID_CHARGE_ROLES]
         has_charge = any(self.charge_flag(i) for i in overnight)
         if overnight and not has_charge:
             ir.async_create_issue(

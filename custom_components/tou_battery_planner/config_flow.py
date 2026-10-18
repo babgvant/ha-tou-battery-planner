@@ -84,12 +84,12 @@ def _prefill(hass, first_soc: str | None, n: int) -> tuple[str | None, str | Non
 
 
 def _prefill_charge_switch(hass, first_soc: str | None, n: int) -> str | None:
-    """Derive switch.<prefix>_tou_<n>_grid_charging from the slot 1 SOC entity."""
-    m = _SOC_PATTERN.match(first_soc or "")
-    if not m:
+    """Find the single switch.*_tou_<n>_grid_charging entity, if unambiguous."""
+    if not first_soc:
         return None
-    cand = f"switch.{m.group(1)[len('number.') :]}{n}_grid_charging"
-    return cand if hass.states.get(cand) else None
+    pattern = re.compile(rf"^switch\..*_tou_{n}_grid_charging$")
+    found = [st.entity_id for st in hass.states.async_all("switch") if pattern.match(st.entity_id)]
+    return found[0] if len(found) == 1 else None
 
 
 def _tunable_schema(defaults: dict[str, Any]) -> dict:
@@ -246,8 +246,8 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             roles = [user_input[f"role_{i}"] for i in range(1, n + 1)]
-            if Role.OVERNIGHT.value not in roles:
-                errors["base"] = "no_overnight_slot"
+            if not {Role.OVERNIGHT.value, Role.CHARGE.value} & set(roles):
+                errors["base"] = "no_charge_slot"
             else:
                 self._data[CONF_SLOT_ROLES] = roles
                 self._data[CONF_SLOT_STARTS] = [

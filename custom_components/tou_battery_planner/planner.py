@@ -18,12 +18,14 @@ class Role(StrEnum):
 
     OVERNIGHT = "overnight"
     MORNING = "morning"
+    CHARGE = "charge"  # daytime grid-charge slot (no overnight price gate)
     PEAK = "peak"
     EVENING = "evening"
 
 
 SPEND_ROLES = (Role.PEAK, Role.EVENING)
-CHARGE_ROLES = (Role.OVERNIGHT, Role.MORNING)
+CHARGE_ROLES = (Role.OVERNIGHT, Role.MORNING, Role.CHARGE)
+GRID_CHARGE_ROLES = (Role.OVERNIGHT, Role.CHARGE)
 
 
 @dataclass(frozen=True)

@@ -12,7 +12,7 @@ async def _start(hass):
     for i in range(1, 7):
         hass.states.async_set(f"number.sa_tou_{i}_battery_soc", "20")
         hass.states.async_set(f"time.sa_tou_{i}_start_time", "00:00:00")
-        hass.states.async_set(f"switch.sa_tou_{i}_grid_charging", "off")
+        hass.states.async_set(f"switch.global_p_house_tou_{i}_grid_charging", "off")
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
     assert result["step_id"] == "inverter"
     return result
@@ -37,7 +37,7 @@ async def test_full_flow_with_prefill(recorder_mock, enable_custom_integrations,
         if hasattr(k, "default") and callable(k.default) and k.default is not vol.UNDEFINED
     }
     assert defaults["soc_3"] == "number.sa_tou_3_battery_soc"
-    assert defaults["charge_switch_3"] == "switch.sa_tou_3_grid_charging"
+    assert defaults["charge_switch_3"] == "switch.global_p_house_tou_3_grid_charging"
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"],
         {

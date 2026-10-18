@@ -6,6 +6,7 @@ import pytest
 
 from custom_components.tou_battery_planner.planner import (
     Role,
+    Slot,
     default_slots,
     desired_caps,
     evening_need_kwh,
@@ -103,3 +104,34 @@ def test_plan_math(pv, reserve, target, profile):
     assert res.reserve_kwh == pytest.approx(reserve)
     assert res.target_soc == target
     assert res.profile == profile
+
+
+def test_daytime_charge_layout():
+    roles = ["overnight", "morning", "morning", "charge", "evening", "overnight"]
+    starts = ["00:00", "08:00", "11:00", "13:00", "15:30", "21:00"]
+    slots = [
+        Slot(i + 1, time(int(s[:2]), int(s[3:])), Role(r))
+        for i, (s, r) in enumerate(zip(starts, roles, strict=True))
+    ]
+
+    def run(now, **kw):
+        args = dict(spike=False, gate_closed=False, ev_charging=False)
+        args.update(kw)
+        return desired_caps(
+            slots,
+            now,
+            30,
+            "cloudy",
+            60,
+            40,
+            40,
+            args["spike"],
+            args["gate_closed"],
+            args["ev_charging"],
+            DEADLINE,
+        ).caps
+
+    assert run(time(14, 0)) == [60, 60, 60, 60, 40, 60]
+    assert run(time(14, 0), spike=True) == [60, 60, 60, 40, 40, 60]
+    # the overnight price gate never touches the charge slot
+    assert run(time(14, 0), gate_closed=True) == [60, 60, 60, 60, 40, 60]
