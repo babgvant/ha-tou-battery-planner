@@ -169,9 +169,8 @@ class TouConfigFlow(ConfigFlow, domain=DOMAIN):
                 _, tm = _prefill(self.hass, self._first_soc, 1)
             fields[vol.Required(f"soc_{i}", **({"default": soc} if soc else {}))] = _ent("number")
             fields[vol.Optional(f"time_{i}", **({"default": tm} if tm else {}))] = _ent("time")
-            fields[
-                vol.Required(f"charge_{i}", default=DEFAULT_LAYOUT[i - 1][1] is Role.OVERNIGHT)
-            ] = bool
+            # Not detectable from HA: default off so the user opts in per slot.
+            fields[vol.Required(f"charge_{i}", default=False)] = bool
         return self.async_show_form(step_id="slots", data_schema=vol.Schema(fields), errors=errors)
 
     async def async_step_sensors(
